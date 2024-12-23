@@ -3,6 +3,7 @@ import Navbar from "@/components/Navbar/Navbar";
 import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 import { AuthProvider } from '@/contexts/AuthContext';
+import { ReduxProvider } from '@/store/provider';
 
 export const metadata: Metadata = {
   title: "Kaizen-Society",
@@ -17,11 +18,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <AuthProvider>
-          <Navbar />
-          {children}
-          <Analytics />
-        </AuthProvider>
+        <ReduxProvider>
+          <AuthProvider>
+            <Navbar />
+            {children}
+            <Analytics />
+          </AuthProvider>
+        </ReduxProvider>
       </body>
     </html>
   );

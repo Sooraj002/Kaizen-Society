@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useCallback, useMemo } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/store/store';
 import { useLocalStorage } from './useLocalStorage';
 
 export function useCompletedChallenges(type: 'web-dev' | 'dsa', totalChallenges: number) {
-  const { user } = useAuth();
+  const user = useSelector((state: RootState) => state.auth.user);
   const [localCompleted, setLocalCompleted, isInitialized] = useLocalStorage<string[]>(`${type}CompletedChallenges`, []);
 
   const progress = useMemo(() => {
@@ -13,7 +14,6 @@ export function useCompletedChallenges(type: 'web-dev' | 'dsa', totalChallenges:
     return Math.round((localCompleted.length / totalChallenges) * 100);
   }, [localCompleted.length, totalChallenges, isInitialized]);
 
-  // Fetch completed challenges from MongoDB when user logs in
   useEffect(() => {
     const fetchFromMongoDB = async () => {
       if (user && isInitialized) {

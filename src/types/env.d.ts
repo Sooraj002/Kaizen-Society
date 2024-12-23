@@ -8,7 +8,9 @@ declare global {
       NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: string;
       NEXT_PUBLIC_FIREBASE_APP_ID: string;
       MONGODB_URI: string;
-    //   MONGODB_DB: string;
+      MONGODB_DB: string;
+      REDIS_URL: string;
+      REDIS_TOKEN: string;
     }
   }
 }

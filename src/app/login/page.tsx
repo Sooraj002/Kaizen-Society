@@ -4,9 +4,12 @@ import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/store/store';
 
 export default function Login() {
-  const { signInWithGoogle, user } = useAuth();
+  const { signInWithGoogle } = useAuth();
+  const user = useSelector((state: RootState) => state.auth.user);
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 

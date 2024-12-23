@@ -1,68 +1,88 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { connectMongoDB } from '@/lib/mongodb';
+import redis from '@/lib/redis';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const type = searchParams.get('type');
 
     if (!userId || !type) {
-        return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Missing required parameters' },
+        { status: 400 }
+      );
     }
 
-    try {
-        const { db } = await connectMongoDB();
-        const completedChallenges = await db
-            .collection('completed-challenges')
-            .findOne({ userId, type });
-
-        return NextResponse.json({
-            completedChallenges: completedChallenges?.challenges || []
-        });
-    } catch (error) {
-        console.error('Database error:', error);
-        return NextResponse.json({ error: 'Database error' }, { status: 500 });
+    // Try to get from Redis first
+    const cacheKey = `challenges:${userId}:${type}`;
+    const cachedData = await redis.get(cacheKey);
+    
+    if (cachedData) {
+      return NextResponse.json({ completedChallenges: cachedData });
     }
+
+    // If not in Redis, get from MongoDB
+    const { db } = await connectMongoDB();
+    const completedChallenges = await db.collection('completed_challenges')
+      .findOne({ userId, type });
+
+    if (completedChallenges) {
+      // Cache in Redis for future requests
+      await redis.set(cacheKey, completedChallenges.challenges);
+      return NextResponse.json({ completedChallenges: completedChallenges.challenges });
+    }
+
+    return NextResponse.json({ completedChallenges: [] });
+  } catch (error) {
+    console.error('Error in GET /api/completed-challenges:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch completed challenges' },
+      { status: 500 }
+    );
+  }
 }
 
-export async function POST(request: Request) {
-    try {
-        const body = await request.json();
-        const { userId, userEmail, type, completedChallenges } = body;
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { userId, userEmail, type, completedChallenges } = body;
 
-        if (!userId || !userEmail || !type || !completedChallenges) {
-            console.error('Missing parameters:', { userId, userEmail, type, completedChallenges });
-            return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
-        }
-
-        const { db } = await connectMongoDB();
-        
-        const result = await db.collection('completed-challenges').updateOne(
-            { userId, type },
-            {
-                $set: {
-                    userId,
-                    userEmail,
-                    type,
-                    challenges: completedChallenges,
-                    updatedAt: new Date()
-                }
-            },
-            { upsert: true }
-        );
-
-        console.log('MongoDB update result:', result);
-
-        return NextResponse.json({ 
-            success: true,
-            message: 'Challenges updated successfully',
-            result 
-        });
-    } catch (error) {
-        console.error('Database error:', error);
-        return NextResponse.json({ 
-            error: 'Database error',
-            details: error instanceof Error ? error.message : 'Unknown error'
-        }, { status: 500 });
+    if (!userId || !userEmail || !type || !completedChallenges) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
     }
+
+    const { db } = await connectMongoDB();
+    
+    // Update MongoDB
+    await db.collection('completed_challenges').updateOne(
+      { userId, type },
+      {
+        $set: {
+          userId,
+          userEmail,
+          type,
+          challenges: completedChallenges,
+          updatedAt: new Date()
+        }
+      },
+      { upsert: true }
+    );
+
+    // Update Redis cache
+    const cacheKey = `challenges:${userId}:${type}`;
+    await redis.set(cacheKey, completedChallenges);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error in POST /api/completed-challenges:', error);
+    return NextResponse.json(
+      { error: 'Failed to update completed challenges' },
+      { status: 500 }
+    );
+  }
 } 

@@ -1,15 +1,14 @@
 "use client"
 
-import { useAuth } from "@/contexts/AuthContext";
+import { useSelector } from 'react-redux';
+import { RootState } from '@/store/store';
 import LoginButton from "../LoginButton";
 import { motion } from 'framer-motion';
 
-
-
 const SignUp = () => {
-    const { user } = useAuth();
+    const user = useSelector((state: RootState) => state.auth.user);
+    
     return (
-
         <>
             {!user && (
                 <motion.div
@@ -21,10 +20,8 @@ const SignUp = () => {
                         Sign in to sync your progress across devices
                     </p>
                     <LoginButton />
-
                 </motion.div>
-            )
-            }
+            )}
         </>
     )
 }

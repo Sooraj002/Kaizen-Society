@@ -1,12 +1,15 @@
 'use client';
 
-import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/store/store';
 
 export default function LoginButton() {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
+  const user = useSelector((state: RootState) => state.auth.user);
   const pathname = usePathname();
   const isChallengePage = pathname.includes('/challenges');
 
